@@ -44,6 +44,6 @@ def plugin_yml = new org.yaml.snakeyaml.Yaml().load(
 
 jar {
   archivesBaseName = 'MultiPlayerHardcore'
-  version = "v" + plugin_yml.version + '-SNAPSHOT'
+  archiveVersion = "v" + plugin_yml.version + '-SNAPSHOT'
   group = 'jeansburger'
 }
