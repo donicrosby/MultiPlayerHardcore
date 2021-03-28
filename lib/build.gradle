@@ -8,6 +8,10 @@
 
 buildscript {
     ext.minecraft_version = "1.16.5-R0.1-SNAPSHOT"
+    ext.snakeyaml_version = "1.28"
+    dependencies {
+      classpath "org.yaml:snakeyaml:$snakeyaml_version"
+    }
 }
 
 plugins {
@@ -34,8 +38,12 @@ dependencies {
 
 }
 
+def plugin_yml = new org.yaml.snakeyaml.Yaml().load(
+  new File("lib/src/main/resources/plugin.yml").newInputStream()
+)
+
 jar {
   archivesBaseName = 'MultiPlayerHardcore'
-  version = '0.0.1-SNAPSHOT'
+  version = "v" + plugin_yml.version + '-SNAPSHOT'
   group = 'jeansburger'
 }
