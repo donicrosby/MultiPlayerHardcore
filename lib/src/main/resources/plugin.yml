@@ -3,4 +3,5 @@ name: MultiPlayerHardcore
 main: com.jeansburger.hardcore.MultiPlayerHardcore
 version: 0.0.1
 api-version: 1.16
+depend: ['Multiverse-Core', 'Multiverse-NetherPortals']
 commands:

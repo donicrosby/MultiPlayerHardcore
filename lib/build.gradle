@@ -8,6 +8,11 @@
 
 buildscript {
     ext.minecraft_version = "1.16.5-R0.1-SNAPSHOT"
+    ext.multiverse_deps = [
+      [name: "Core", version: "4.2.2"],
+      [name: "NetherPortals", version: "4.2.1"]
+    ]
+    ext.multiverse_version = "4.2.2"
     ext.snakeyaml_version = "1.28"
     dependencies {
       classpath "org.yaml:snakeyaml:$snakeyaml_version"
@@ -28,6 +33,9 @@ repositories {
     maven {
       url 'https://hub.spigotmc.org/nexus/content/repositories/snapshots/'
     }
+    maven {
+      url = "https://repo.onarandombox.com/content/groups/public/"
+    }
 }
 
 dependencies {
@@ -35,6 +43,10 @@ dependencies {
     // testImplementation 'junit:junit:4.13'
 
     compileOnly "org.spigotmc:spigot-api:$minecraft_version"
+    multiverse_deps.each {
+      compileOnly "com.onarandombox.multiverse${it.name.toLowerCase()}:Multiverse-${it.name}:${it.version}"
+    }
+
 
 }
 
