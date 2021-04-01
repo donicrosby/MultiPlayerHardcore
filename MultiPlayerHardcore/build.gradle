@@ -8,12 +8,13 @@
 
 buildscript {
     ext.minecraft_version = "1.16.5-R0.1-SNAPSHOT"
+    ext.guice_version = "5.0.1"
     ext.multiverse_deps = [
       [name: "Core", version: "4.2.2"],
       [name: "NetherPortals", version: "4.2.1"]
     ]
-    ext.multiverse_version = "4.2.2"
     ext.snakeyaml_version = "1.28"
+    ext.shadow_version = "5.2.0"
     dependencies {
       classpath "org.yaml:snakeyaml:$snakeyaml_version"
     }
@@ -22,6 +23,7 @@ buildscript {
 plugins {
     // Apply the java-library plugin for API and implementation separation.
     id 'java-library'
+    id 'com.github.johnrengelman.shadow' version "$shadow_version"
 }
 
 repositories {
@@ -38,11 +40,16 @@ repositories {
     }
 }
 
+configurations  {
+    runtimeClasspath.extendsFrom(implementation)
+}
+
 dependencies {
     // Use JUnit test framework.
     // testImplementation 'junit:junit:4.13'
 
     compileOnly "org.spigotmc:spigot-api:$minecraft_version"
+    api "com.google.inject:guice:$guice_version"
     multiverse_deps.each {
       compileOnly "com.onarandombox.multiverse${it.name.toLowerCase()}:Multiverse-${it.name}:${it.version}"
     }
@@ -51,11 +58,33 @@ dependencies {
 }
 
 def plugin_yml = new org.yaml.snakeyaml.Yaml().load(
-  new File("lib/src/main/resources/plugin.yml").newInputStream()
+  new File( project.name + "/src/main/resources/plugin.yml").newInputStream()
 )
+version = "v" + plugin_yml.version + '-SNAPSHOT'
+group 'com.jeansburger.hardcore'
 
-jar {
-  archivesBaseName = 'MultiPlayerHardcore'
-  archiveVersion = "v" + plugin_yml.version + '-SNAPSHOT'
-  group = 'jeansburger'
+
+task createClassPathFile {
+  doLast {
+    def classPathFile = new File(".classpath").newWriter()
+    def classPath = ""
+    configurations.compileClasspath.each {
+      String jarPath = it.getAbsolutePath() + ':'
+      classPath = classPath + jarPath
+    }
+    classPath = classPath.substring(0, classPath.length() - 1)
+    classPathFile.withWriter { w ->
+      w << classPath
+    }
+  }
 }
+
+shadowJar {
+    archiveClassifier.set('')
+    minimize()
+}
+
+tasks.build.dependsOn tasks.shadowJar
+defaultTasks 'shadowJar'
+
+build.finalizedBy(createClassPathFile)

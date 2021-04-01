@@ -8,4 +8,4 @@
  */
 
 rootProject.name = 'MultiPlayerHardcore'
-include('lib')
+include('MultiPlayerHardcore')
