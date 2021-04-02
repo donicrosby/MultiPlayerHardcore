@@ -1,13 +1,12 @@
 package com.jeansburger.hardcore.utils.worldmanager.players;
 
 import com.jeansburger.hardcore.utils.worldmanager.PlayerManager;
+import com.onarandombox.MultiverseCore.api.MVDestination;
 import com.onarandombox.MultiverseCore.api.MultiverseWorld;
+import com.onarandombox.MultiverseCore.api.SafeTTeleporter;
 import org.bukkit.Bukkit;
-import org.bukkit.Location;
 import org.bukkit.entity.Player;
-import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
@@ -18,37 +17,35 @@ public class TeleportPlayer extends BukkitRunnable {
     private final MultiverseWorld world;
     private final String playerWhoDied;
     private final PlayerManager mgr;
-    private BukkitTask task;
 
-    public TeleportPlayer(@NotNull PlayerManager mgr, @NotNull  Player player, @NotNull  MultiverseWorld world, @Nullable String playerWhoDied) {
+    public TeleportPlayer(@NotNull PlayerManager mgr,
+                          @NotNull  Player player,
+                          @NotNull MultiverseWorld world,
+                          @Nullable String playerWhoDied)
+    {
         this.mgr = mgr;
         this.player = player;
         this.world = world;
         this.playerWhoDied = playerWhoDied;
     }
 
-    public void setTask(BukkitTask task){
-        this.task = task;
-    }
-
     @Override
     public void run() {
         if (player.isOnline()) {
-            Location holding = world.getSpawnLocation();
-            player.teleport(holding, PlayerTeleportEvent.TeleportCause.PLUGIN);
-            if(playerWhoDied != null) {
-                StringBuilder sb = new StringBuilder();
-                if (player.getDisplayName().equals(playerWhoDied)){
-                    sb.append("You have");
-                } else {
-                    sb.append(Bukkit.getPlayer(playerWhoDied).getDisplayName());
-                    sb.append("has");
-                }
-                sb.append(" died please make a note of it. Enjoy the new world!");
-                player.sendMessage(sb.toString());
+            if (player.isDead()){
+                player.spigot().respawn();
             } else {
-                player.sendMessage("Here is the new hardcore world, try not to die!");
+                SafeTTeleporter tp = mgr.getPlugin().getSafeTP();
+                MVDestination worldDest = mgr.getPlugin().getDestinationFactory().getDestination("w:"+world.getAlias());
+                tp.safelyTeleport(Bukkit.getConsoleSender(), player, worldDest);
             }
+
+            player.sendMessage(
+                    mgr.getTeleportText(
+                            player.getDisplayName(),
+                            Bukkit.getPlayer(playerWhoDied).getDisplayName()
+                    )
+            );
         }
         this.cancel();
         this.mgr.removeTask(this);
