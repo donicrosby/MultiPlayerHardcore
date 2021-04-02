@@ -13,44 +13,44 @@ import java.util.logging.Logger;
 
 public class RecreateWorld extends BukkitRunnable {
   private final HCWorldManager mgr;
-  private final List<String> hardcoreWorlds;
+  private final String hardcoreWorld;
+  private final String seed;
+  private final World.Environment env;
   private final String holdingWorld;
-  private final String netherSuffix;
-  private final String theEndSuffix;
   private final Logger pluginLogger;
 
-  public RecreateWorld(HCWorldManager mgr, List<String> hardcoreWorlds, String holdingWorld) {
+  public RecreateWorld(HCWorldManager mgr,
+                       String hardcoreWorld,
+                       String seed,
+                       World.Environment env,
+                       String holdingWorld) {
     this.mgr = mgr;
     this.pluginLogger = this.mgr.getPlugin().getLogger();
-    ConfigManager config = this.mgr.getPlugin().getConfigManger();
-    this.netherSuffix = config.getNetherSuffix();
-    this.theEndSuffix = config.getEndSuffix();
-    this.hardcoreWorlds = hardcoreWorlds;
+    this.hardcoreWorld = hardcoreWorld;
+    this.seed = seed;
+    this.env = env;
     this.holdingWorld = holdingWorld;
   }
 
 
   @Override
   public void run() {
-    String seed = String.valueOf(new Random().nextLong());
-    for (String hardcoreWorld: hardcoreWorlds){
-      mgr.getPlugin().getMVWorldManager().deleteWorld(hardcoreWorld);
-      if(hardcoreWorld.endsWith(netherSuffix)){
-        createWorld(hardcoreWorld, seed, World.Environment.NETHER);
-      } else if (hardcoreWorld.endsWith(theEndSuffix)) {
-        createWorld(hardcoreWorld, seed, World.Environment.THE_END);
-      } else {
-        createWorld(hardcoreWorld, seed, World.Environment.NORMAL);
-      }
-      MultiverseWorld hardcore = mgr.getPlugin().getMVWorldManager().getMVWorld(hardcoreWorld);
-      hardcore.setRespawnToWorld(holdingWorld);
-      hardcore.setDifficulty(Difficulty.HARD);
-      World newHardcore = hardcore.getCBWorld();
-      if (!newHardcore.isHardcore()){
-        newHardcore.setHardcore(true);
-      }
+    // Delete world
+    mgr.getPlugin().getMVWorldManager().deleteWorld(hardcoreWorld);
+
+    // Create New World
+    createWorld(hardcoreWorld, seed, env);
+
+    // Set Difficulties and Respawn
+    MultiverseWorld hardcore = mgr.getPlugin().getMVWorldManager().getMVWorld(hardcoreWorld);
+    hardcore.setRespawnToWorld(holdingWorld);
+    hardcore.setDifficulty(Difficulty.HARD);
+
+    World newHardcore = hardcore.getCBWorld();
+    if (!newHardcore.isHardcore()){
+      newHardcore.setHardcore(true);
     }
-    this.mgr.notifyWorldCreate();
+    this.mgr.createWorldTaskDone(this);
     this.cancel();
   }
 
