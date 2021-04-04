@@ -9,6 +9,7 @@
 buildscript {
     ext.minecraft_version = "1.16.5-R0.1-SNAPSHOT"
     ext.guice_version = "5.0.1"
+    ext.apache_lang_version = "3.12.0"
     ext.multiverse_deps = [
       [name: "Core", version: "4.2.2"],
       [name: "NetherPortals", version: "4.2.1"]
@@ -50,6 +51,7 @@ dependencies {
 
     compileOnly "org.spigotmc:spigot-api:$minecraft_version"
     api "com.google.inject:guice:$guice_version"
+    api "org.apache.commons:commons-lang3:$apache_lang_version"
     multiverse_deps.each {
       compileOnly "com.onarandombox.multiverse${it.name.toLowerCase()}:Multiverse-${it.name}:${it.version}"
     }

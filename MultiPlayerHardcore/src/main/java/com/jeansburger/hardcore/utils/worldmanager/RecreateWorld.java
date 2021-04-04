@@ -1,6 +1,6 @@
 package com.jeansburger.hardcore.utils.worldmanager;
 
-import com.jeansburger.hardcore.config.ConfigManager;
+import com.jeansburger.hardcore.utils.worldmanager.worlds.HCWorldManager;
 import com.onarandombox.MultiverseCore.api.MultiverseWorld;
 import org.bukkit.Difficulty;
 import org.bukkit.World;
@@ -8,7 +8,6 @@ import org.bukkit.WorldType;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.List;
-import java.util.Random;
 import java.util.logging.Logger;
 
 public class RecreateWorld extends BukkitRunnable {
@@ -18,31 +17,58 @@ public class RecreateWorld extends BukkitRunnable {
   private final World.Environment env;
   private final String holdingWorld;
   private final Logger pluginLogger;
+  private final boolean deleteWorld;
+  private List<String> aliases;
 
   public RecreateWorld(HCWorldManager mgr,
                        String hardcoreWorld,
                        String seed,
                        World.Environment env,
-                       String holdingWorld) {
+                       String holdingWorld,
+                       List<String> aliases,
+                       boolean deleteWorld) {
     this.mgr = mgr;
     this.pluginLogger = this.mgr.getPlugin().getLogger();
     this.hardcoreWorld = hardcoreWorld;
     this.seed = seed;
     this.env = env;
     this.holdingWorld = holdingWorld;
+    this.deleteWorld = deleteWorld;
+    this.aliases = aliases;
   }
 
 
   @Override
   public void run() {
-    // Delete world
-    mgr.getPlugin().getMVWorldManager().deleteWorld(hardcoreWorld);
 
+    if(deleteWorld){
+      // Delete world
+      mgr.getPlugin().getMVWorldManager().deleteWorld(hardcoreWorld);
+      createHCWorld();
+    } else {
+      MultiverseWorld hcWorld = mgr.getPlugin().getMVWorldManager().getMVWorld(hardcoreWorld);
+      if (hcWorld == null){
+        pluginLogger.info("Creating Hardcore world " + hardcoreWorld + " from config!");
+        createHCWorld();
+      }
+    }
+    finalizeTasks();
+  }
+
+  private void finalizeTasks(){
+    this.mgr.createWorldTaskDone(this, deleteWorld);
+    this.cancel();
+  }
+
+  private void createHCWorld(){
     // Create New World
-    createWorld(hardcoreWorld, seed, env);
+    createMVWorld(hardcoreWorld, seed, env);
 
     // Set Difficulties and Respawn
     MultiverseWorld hardcore = mgr.getPlugin().getMVWorldManager().getMVWorld(hardcoreWorld);
+    for (String alias : aliases){
+      hardcore.setAlias(alias);
+    }
     hardcore.setRespawnToWorld(holdingWorld);
     hardcore.setDifficulty(Difficulty.HARD);
 
@@ -50,11 +76,10 @@ public class RecreateWorld extends BukkitRunnable {
     if (!newHardcore.isHardcore()){
       newHardcore.setHardcore(true);
     }
-    this.mgr.createWorldTaskDone(this);
-    this.cancel();
+
   }
 
-  private boolean createWorld(String name, String seed, World.Environment env){
+  private boolean createMVWorld(String name, String seed, World.Environment env){
     return mgr.getPlugin().getMVWorldManager().addWorld(
             name, // World Name
             env, // Normal overworld

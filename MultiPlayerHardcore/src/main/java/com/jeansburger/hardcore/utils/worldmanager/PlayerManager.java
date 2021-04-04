@@ -2,7 +2,7 @@ package com.jeansburger.hardcore.utils.worldmanager;
 
 import com.jeansburger.hardcore.MultiPlayerHardcore;
 import com.jeansburger.hardcore.utils.worldmanager.players.TeleportPlayer;
-import com.onarandombox.MultiverseCore.api.MVDestination;
+import com.jeansburger.hardcore.utils.worldmanager.worlds.HCWorldManager;
 import com.onarandombox.MultiverseCore.api.MultiverseWorld;
 import org.bukkit.entity.Player;
 
@@ -48,7 +48,12 @@ public class PlayerManager {
         this.pluginLogger.info("Notifying players of new hardcore world...");
         for(Player player: holdingWorld.getCBWorld().getPlayers()){
             if (player.isOnline()){
-                player.sendMessage("New Hardcore world has been created!");
+                player.sendMessage(
+                        mgr.getPlugin().getConfigManger().getNewWorldText(
+                                mgr.getHardcoreWorldName(),
+                                player.getDisplayName()
+                        )
+                );
             }
         }
         this.playersOnHardcore.clear();
@@ -62,11 +67,7 @@ public class PlayerManager {
     }
 
     public String getTeleportText(String player, String playerWhoDied){
-        return mgr.getPlugin().getConfigManger().getTeleportText(player, playerWhoDied);
-    }
-
-    public MVDestination getWorldTPLocation(String world){
-        return getPlugin().getDestinationFactory().getDestination(world);
+        return mgr.getPlugin().getConfigManger().getTeleportText(mgr.getHardcoreWorldName(), player, playerWhoDied);
     }
 
     public MultiPlayerHardcore getPlugin(){

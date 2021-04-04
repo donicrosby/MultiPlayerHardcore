@@ -4,7 +4,8 @@ import com.google.inject.Injector;
 
 import com.jeansburger.hardcore.config.ConfigManager;
 import com.jeansburger.hardcore.utils.guice.MultiPlayerHardcoreBinder;
-import com.jeansburger.hardcore.utils.worldmanager.HCWorldManager;
+import com.jeansburger.hardcore.utils.worldmanager.HCWorldManagerFactory;
+import com.jeansburger.hardcore.utils.worldmanager.worlds.HCWorldManager;
 import com.onarandombox.MultiverseCore.MultiverseCore;
 import com.onarandombox.MultiverseCore.api.MVWorldManager;
 import com.onarandombox.MultiverseCore.api.SafeTTeleporter;
@@ -14,11 +15,14 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.Bukkit;
 
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Logger;
 
 public class MultiPlayerHardcore extends JavaPlugin {
-    @Inject private HCWorldManager worldManager;
+    @Inject private HCWorldManagerFactory worldManagerFactory;
     @Inject private ConfigManager config;
+    private List<HCWorldManager> worldManagers = new ArrayList<>();
     private Logger logger;
     private MultiverseCore mvCore;
 
@@ -29,13 +33,16 @@ public class MultiPlayerHardcore extends JavaPlugin {
         MultiPlayerHardcoreBinder binder = new MultiPlayerHardcoreBinder(this);
         Injector injector = binder.createInjector();
         injector.injectMembers(this);
-
-        this.getServer().getPluginManager().registerEvents(this.worldManager, this);
+        for (String world : config.getHardcoreWorlds()){
+            worldManagers.add(worldManagerFactory.createHCWorldManager(world));
+        }
     }
 
     @Override
     public void onDisable() {
-        HandlerList.unregisterAll(this.worldManager);
+        for (HCWorldManager manager: worldManagers){
+            HandlerList.unregisterAll(manager);
+        }
     }
 
     public MVWorldManager getMVWorldManager(){

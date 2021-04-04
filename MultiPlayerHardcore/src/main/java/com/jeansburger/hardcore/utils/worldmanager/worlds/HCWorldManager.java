@@ -1,14 +1,19 @@
-package com.jeansburger.hardcore.utils.worldmanager;
+package com.jeansburger.hardcore.utils.worldmanager.worlds;
 
-import com.google.inject.Inject;
 import com.jeansburger.hardcore.MultiPlayerHardcore;
 import com.jeansburger.hardcore.config.ConfigManager;
+import com.jeansburger.hardcore.utils.worldmanager.PlayerManager;
+import com.jeansburger.hardcore.utils.worldmanager.RecreateWorld;
 import com.onarandombox.MultiverseCore.api.MVWorldManager;
 import com.onarandombox.MultiverseCore.api.MultiverseWorld;
 import org.bukkit.World;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,6 +27,8 @@ public class HCWorldManager implements Listener {
   private MVWorldManager mvWorldManager;
   private PlayerManager playerMgr;
   private List<String> hardcoreWorlds;
+  private List<String> aliases;
+  private String hardcoreWorldName;
   private String netherSuffix;
   private String theEndSuffix;
   private String holdingWorldName;
@@ -44,14 +51,46 @@ public class HCWorldManager implements Listener {
     }
   }
 
-  @Inject
-  public HCWorldManager(MultiPlayerHardcore plugin){
+  @EventHandler
+  public void onPlayerJoin(PlayerJoinEvent e){
+    Player player = e.getPlayer();
+    World joinedWorld = player.getWorld();
+    checkPlayerResetList(joinedWorld, player);
+  }
+
+  @EventHandler
+  public void onPlayerTP(PlayerTeleportEvent e){
+    Player player = e.getPlayer();
+    World joinedWorld = e.getTo().getWorld();
+    checkPlayerResetList(joinedWorld, player);
+  }
+
+  private void checkPlayerResetList(World joinedWorld, Player player) {
+    if(isHardcoreWorld(joinedWorld)){
+      if(!plugin.getConfigManger().isPlayerInSeenList(hardcoreWorldName, player.getUniqueId())){
+        player.setHealth(player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getBaseValue());
+        player.setFoodLevel(20);
+        player.setLevel(0);
+        player.setExp(0);
+        player.getInventory().clear();
+        player.updateInventory();
+        plugin.getConfigManger().addPlayerToSeenList(hardcoreWorldName, player.getUniqueId());
+      }
+    }
+  }
+
+  public HCWorldManager(MultiPlayerHardcore plugin, String worldName){
     this.plugin = plugin;
     this.pluginLogger = plugin.getLogger();
     this.mvWorldManager = this.plugin.getMVWorldManager();
+    this.hardcoreWorldName = worldName;
     this.playerMgr = new PlayerManager(this);
     reloadConfig();
     setHardcoreWorldsHardcore();
+  }
+
+  public String getHardcoreWorldName(){
+    return this.hardcoreWorldName;
   }
 
   public List<MultiverseWorld> getHardcoreWorlds(){
@@ -72,10 +111,15 @@ public class HCWorldManager implements Listener {
 
   private void getConfig(){
     ConfigManager config = this.plugin.getConfigManger();
-    this.hardcoreWorlds = config.getHardcoreWorlds("multiplayerhardcore");
-    this.holdingWorldName = config.getHoldingWorld();
-    this.theEndSuffix = config.getEndSuffix();
-    this.netherSuffix = config.getNetherSuffix();
+    this.hardcoreWorlds = config.getHardcoreWorlds(this.hardcoreWorldName);
+    this.holdingWorldName = config.getHoldingWorld(this.hardcoreWorldName);
+    this.theEndSuffix = config.getEndSuffix(this.hardcoreWorldName);
+    this.netherSuffix = config.getNetherSuffix(this.hardcoreWorldName);
+    this.aliases = config.getAliases(this.hardcoreWorldName);
+    boolean createWorldsOnStart = config.getCreateWorlds(this.hardcoreWorldName);
+    if(createWorldsOnStart){
+      this.createWorlds(false);
+    }
   }
 
   private MultiverseWorld getMVWorld(String worldName, String worldType){
@@ -107,11 +151,16 @@ public class HCWorldManager implements Listener {
 
   // Called by Player manager after all players have been tped
   public void recreateWorld() {
-    createNewWorldTasks();
+    createWorlds(true);
+  }
+
+  public void createWorlds(boolean deleteWorlds){
+    worldNeedsToBeRecreated = true;
+    createNewWorldTasks(deleteWorlds);
     runNewWorldTasks();
   }
 
-  private void createNewWorldTasks(){
+  private void createNewWorldTasks(boolean deleteWorld){
     String newSeed = getNewWorldSeed();
     for (String hardcoreWorld: this.hardcoreWorlds){
       if (hardcoreWorld.endsWith(this.netherSuffix)){
@@ -121,7 +170,9 @@ public class HCWorldManager implements Listener {
                         hardcoreWorld,
                         newSeed,
                         World.Environment.NETHER,
-                        this.holdingWorldName)
+                        this.holdingWorldName,
+                        new ArrayList<>(),
+                        deleteWorld)
         );
       } else if (hardcoreWorld.endsWith(this.theEndSuffix)){
         this.createWorldTasks.add(
@@ -130,7 +181,9 @@ public class HCWorldManager implements Listener {
                         hardcoreWorld,
                         newSeed,
                         World.Environment.THE_END,
-                        this.holdingWorldName)
+                        this.holdingWorldName,
+                        new ArrayList<>(),
+                        deleteWorld)
         );
       } else {
         this.createWorldTasks.add(
@@ -139,7 +192,9 @@ public class HCWorldManager implements Listener {
                         hardcoreWorld,
                         newSeed,
                         World.Environment.NORMAL,
-                        this.holdingWorldName)
+                        this.holdingWorldName,
+                        this.aliases,
+                        deleteWorld)
         );
       }
     }
@@ -154,18 +209,25 @@ public class HCWorldManager implements Listener {
     return String.valueOf(new Random().nextLong());
   }
 
-  private void notifyWorldCreate() {
+  private void notifyWorldCreate(boolean notifyPlayers) {
     this.worldNeedsToBeRecreated = false;
-    this.playerMgr.notifyPlayersToNewHardcore();
+    plugin.getConfigManger().resetPlayerSeenList(hardcoreWorldName);
+    if (notifyPlayers){
+      this.playerMgr.notifyPlayersToNewHardcore();
+    }
   }
 
-  public void createWorldTaskDone(RecreateWorld task){
+  public void createWorldTaskDone(RecreateWorld task, boolean worldDeleted){
     createWorldTasks.remove(task);
     if (createWorldTasks.isEmpty()){
-      notifyWorldCreate();
+      notifyWorldCreate(worldDeleted);
     } else {
       runNewWorldTasks();
     }
+  }
+
+  private boolean isHardcoreWorld(World world){
+    return getHardcoreWorlds().contains(mvWorldManager.getMVWorld(world));
   }
 
 }

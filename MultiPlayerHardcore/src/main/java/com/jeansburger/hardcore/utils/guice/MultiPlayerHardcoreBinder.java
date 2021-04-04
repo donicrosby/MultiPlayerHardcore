@@ -3,9 +3,6 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.jeansburger.hardcore.MultiPlayerHardcore;
-import com.jeansburger.hardcore.utils.worldmanager.HCWorldManager;
-
-import java.util.logging.Logger;
 
 public class MultiPlayerHardcoreBinder extends AbstractModule {
 

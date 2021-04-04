@@ -1,0 +1,12 @@
+
+worlds:
+  - "multiplayerhardcore"
+
+multiplayerhardcore:
+  players: []
+  createOnStart: "true"
+  holdingWorld: "world"
+  aliases:
+    - "hardcore"
+  onDeathMessage: "{<player> has:You have} died please make a note of it."
+  onNewWorldCreate: "New hardcore world has been created!"
